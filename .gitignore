@@ -27,7 +27,8 @@ target/
 NHINKeyStore
 *xdm.zip
 java/config/config-manager/war
-java/dns/warjava/gateway/IncomingMsgFolder/
+java/dns/war
+java/gateway/IncomingMsgFolder/
 java/gateway/OutgoingMsgFolder/
 java/gateway/RawMsgFolder/
 java/xd-common/war
