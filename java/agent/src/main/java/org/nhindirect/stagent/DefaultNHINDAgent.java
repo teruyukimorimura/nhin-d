@@ -30,9 +30,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.mail.Address;
 import javax.mail.Header;
 import javax.mail.MessagingException;
 import javax.mail.internet.ContentType;
@@ -798,11 +800,21 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
 	            
 	            return message;
 	        }
+	        catch (AgentException e)
+	        {
+	            if (m_listener != null)
+	            	m_listener.errorIncoming(message, e);  
+	        	throw e;
+	        }
+	        catch (NHINDException e)
+	        {
+	            if (m_listener != null)
+	            	m_listener.errorIncoming(message, e);  
+	        	throw e;
+	        }
 	        catch (Exception error)
-	        {        	
-	        	LOGGER.error("Error processing incoming message: " + error.getMessage(), error);        	
-	        	
-	        	NHINDException throwError = new NHINDException(error);
+	        {        		        	
+	        	NHINDException throwError = new NHINDException(AgentError.Unexpected, error);
 	        	
 	            if (m_listener != null)
 	            	m_listener.errorIncoming(message, error);  
@@ -870,12 +882,17 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
                     }
                     catch (Exception e)
                     {
-                    	/*no-op*/
+                    	LOGGER.warn("Exception getting anchors for inbound notification policy.", e);
                     }
                 }
         	}
         }
         
+        // for incoming messages, headers may have been re-written
+        // by a man in the middle attack.  The authoritative headers are in the unwrapped message, so they need to be compared to the header in 
+        // Enveloped message to ensure that they have not been tampered
+        // Policy will dictate what the STA will do with the message if a tamper has been detected
+        enforceTamperPolicy(message);
         
         
         this.trustModel.enforce(message);        
@@ -895,6 +912,61 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
         message.updateRoutingHeaders();        
     }
 
+    /**
+     * Enforces a tamper policy by checking the message envelope headers against an unwrapped message.
+     * An exception is thrown depending on the policy
+     * @throws NHINDException Thrown if a tamper condition exists and the local policy indicates that the message
+     * should be rejected.
+     */
+    protected void enforceTamperPolicy(MessageEnvelope env) throws NHINDException
+    {
+    	// the env parameter should represent an authoritative unwrapped message
+    	// each recipient and sender in the envelope should be found in the authoritative headers of the
+    	// unwrapped message
+    	
+    	// retrieve the policy... fall back to false for behavioral passivity
+        final boolean rejectOnRoutingTamper =
+        		OptionsParameter.getParamValueAsBoolean(OptionsManager.getInstance().
+        				getParameter(OptionsParameter.REJECT_ON_ROUTING_TAMPER), false);
+    	
+    	try
+    	{
+    		// use a for loop and normalize the email addresses
+    		final List<String> authRecips = new ArrayList<String>();
+    		if (env.getMessage().getAllRecipients() != null)
+    			for (Address toRecip : env.getMessage().getAllRecipients())
+    				authRecips.add(((InternetAddress)toRecip).getAddress().toLowerCase());
+
+    		// now iterate through all enveloped recipient and ensure that they exist in the authoritative list
+    		if (env.getRecipients() != null)
+    		{
+	    		for (NHINDAddress envRecips : env.getRecipients())
+	    		{
+	    			if (!(authRecips.contains(envRecips.getAddress().toLowerCase())))
+	    			{
+	    				// this is a tamper condition... policy will dictate what will happen next
+						final String exceptionMessage = "Recipient " + envRecips.getAddress() + " was not found in the authoritative headers";
+	    				if (rejectOnRoutingTamper)
+	  
+	    					// throw an exception and reject the message
+	    					throw new AgentException(AgentError.MessageTamperDectection, exceptionMessage);
+	    				else
+	    					// log a warning
+	    					LOGGER.warn(exceptionMessage);
+	    			}
+	    		}
+    		}
+    		// checking the Mail From or From headers is redundant in that it must already bind to
+    		// certification in the message signature... there may also be differences between the SMTP Mail From header
+    		// and the From header for legitimate reasons
+    		
+    	}
+    	catch (MessagingException e)
+    	{
+    		throw new NHINDException(AgentError.Unexpected, "Invalid internet address format.", e);
+    	}
+    }
+    
     /*
      * Binds the addresses with certificates and trust anchors
      */
@@ -940,7 +1012,7 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
             }
             catch (Exception e)
             {
-            	/*no-op*/
+            	LOGGER.warn("Exception getting incoming anchors for recipient " + recipient.getAddress());
             }
             if (anchors == null || anchors.size() == 0)
             	LOGGER.warn("bindAddresses(IncomingMessage message) - Could not obtain incoming trust anchors for recipient " + recipient.getAddress());
@@ -1095,7 +1167,7 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
 	    		throw new IllegalArgumentException();
 	    	
 	        OutgoingMessage message = new OutgoingMessage(this.wrapMessage(messageText));
-	        
+
 	        return this.processOutgoing(message);
     	}
     	finally
@@ -1119,7 +1191,8 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
     	{ 
 	        this.checkEnvelopeAddresses(recipients, sender);
 	
-	        OutgoingMessage message = new OutgoingMessage(this.wrapMessage(messageText), recipients, sender);            
+	        OutgoingMessage message = new OutgoingMessage(this.wrapMessage(messageText), recipients, sender);     
+	        
 	        return this.processOutgoing(message);  
     	}
     	finally
@@ -1188,10 +1261,8 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
 	        	//	LOGGER.debug("Completed processing outing message.  Result message:\r\n" + EntitySerializer.Default.serialize(message) + "\r\n");             
 	        }
 	        catch (Exception error)
-	        {        	        	        
-	        	LOGGER.error("Error processing outgoing message: " + error.getMessage(), error);
-	        	
-	        	NHINDException throwError = new NHINDException(error);
+	        {        	        	        	        	
+	        	NHINDException throwError = new NHINDException("Error processing outgoing message", error);
 	        	
 	            if (m_listener != null)
 	            	m_listener.errorOutgoing(message, error);  
@@ -1216,7 +1287,7 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
 	    {
 	        message.setMessage(this.wrapMessage(message.getMessage()));
 	    }
-    	
+	    
     	///CLOVER:OFF
         if (message.getSender() == null)
         {
@@ -1282,7 +1353,7 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
     	}
     	catch (Exception e)
     	{
-    		/*no-op*/
+    		LOGGER.warn("Exception getting outbound anchors for sender " + message.getSender());
     	}
     	
     	if (anchors == null || anchors.size() == 0)
@@ -1392,8 +1463,10 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
     @SuppressWarnings("unchecked")
     protected void signAndEncryptMessage(OutgoingMessage message)
     {
+
+    	
         SignedEntity signedEntity = cryptographer.sign(message.getMessage(), message.getSender().getCertificates());
-               
+        
         try
         {
 	        if (encryptionEnabled)
@@ -1476,13 +1549,17 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
         	if (required)
         		throw ex;
         }
+        catch (NHINDException ex)
+        {
+        	throw ex;
+        }
         catch (Exception ex)
         {
         	LOGGER.warn("Exception thrown resolving private certs for address " + address.getAddress(), ex);
             if (required)
             {
             	// for logging, tracking etc...
-            	throw new NHINDException(ex);
+            	throw new NHINDException(AgentError.Unexpected, ex);
             }
         }
 
@@ -1532,13 +1609,17 @@ public class DefaultNHINDAgent implements NHINDAgent, MutableAgent
             if (required)
             	throw ex;
         }
+		catch (NHINDException e)
+		{
+			throw e;
+		}
         catch (Exception ex)
         {
         	LOGGER.warn("Exception thrown resolving public certs for address " + address.getAddress(), ex);
             if (required)
             {
             	// for logging, tracking etc...
-            	throw new NHINDException(ex);
+            	throw new NHINDException(AgentError.Unexpected, ex);
             }                
         }
 
