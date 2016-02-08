@@ -170,7 +170,7 @@
 	<property name="direct-common-audit.dir" value="${install.root.dir}/../direct-common-audit"></property>		
 	<property name="xdmail.dir" value="${install.root.dir}/../xdmail"></property>
 	<property name="xd-common.dir" value="${install.root.dir}/../xd-common"></property>	
-	<property name="lib.agent" value="${install.root.dir}/lib/agent-2.1.1.jar"></property>
+	<property name="lib.agent" value="${install.root.dir}/lib/agent-2.2-SNAPSHOT.jar"></property>
 	<property name="lib.gateway" value="${install.root.dir}/lib/gateway-4.1.jar"></property>
 	<property name="lib.direct-common" value="${install.root.dir}/lib/direct-common-2.0.jar"></property>	
 	<property name="lib.direct-common-audit" value="${install.root.dir}/lib/direct-common-audit-1.0.jar"></property>		
