@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.nhind</groupId>
 	<artifactId>config-manager</artifactId>
-	<version>1.1-SNAPSHOT</version>
+	<version>1.2-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<name>NHIN Direct Java configuration manager</name>
     <description>NHIN Direct Java configuration manager</description>
@@ -44,22 +44,102 @@
 		<dependency>
 			<groupId>org.nhind</groupId>
 			<artifactId>dns</artifactId>
-			<version>1.2.2</version>
+			<version>1.2.3</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-asm</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-core</artifactId>
+				</exclusion>		
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-aop</artifactId>
+				</exclusion>	
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-tx</artifactId>
+				</exclusion>	
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-orm</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-test</artifactId>
+				</exclusion>	
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-beans</artifactId>
+				</exclusion>	
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-context</artifactId>
+				</exclusion>					
+				<exclusion>
+					<groupId>org.hibernate</groupId>
+					<artifactId>hibernate</artifactId>
+				</exclusion>	
+				<exclusion>
+					<groupId>org.hibernate</groupId>
+					<artifactId>hibernate-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.hibernate</groupId>
+					<artifactId>hibernate-entitymanager</artifactId>
+				</exclusion>	
+				<exclusion>
+					<groupId>org.hibernate</groupId>
+					<artifactId>hibernate-annotations</artifactId>
+				</exclusion>	
+				<exclusion>
+					<groupId>com.google.inject</groupId>
+					<artifactId>guice</artifactId>
+				</exclusion>	
+				<exclusion>
+					<groupId>org.apache.geronimo.specs</groupId>
+					<artifactId>geronimo-jpa_2.0_spec</artifactId>
+				</exclusion>																																											
+			</exclusions>				
 		</dependency>	
 		<dependency>
 			<groupId>org.nhind</groupId>
 			<artifactId>config-service-client</artifactId>
-			<version>1.4</version>
+			<version>2.0</version>
+			<exclusions>	
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-context</artifactId>
+				</exclusion>																																				
+			</exclusions>				
 		</dependency>			
 		<dependency>
 			<groupId>org.nhind</groupId>
 			<artifactId>direct-common</artifactId>
-			<version>1.2</version>
+			<version>1.4.2</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.google.inject</groupId>
+					<artifactId>guice</artifactId>
+				</exclusion>																																											
+			</exclusions>				
 		</dependency>
 		<dependency>
 			<groupId>org.nhind</groupId>
 			<artifactId>agent</artifactId>
-			<version>2.0</version>
+			<version>2.0.11</version>
+			<exclusions>	
+				<exclusion>
+					<groupId>org.apache.james</groupId>
+					<artifactId>apache-jsieve-mailet</artifactId>
+				</exclusion>	
+				<exclusion>
+					<groupId>com.google.inject</groupId>
+					<artifactId>guice</artifactId>
+				</exclusion>																																								
+			</exclusions>					
 		</dependency>							
 		<dependency>
 		    <groupId>dnsjava</groupId>
